@@ -1,0 +1,52 @@
+name: Daily Repository Backup
+
+on:
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          # Update package lists
+          sudo apt-get update
+          
+          # Install git (already present, but ensure latest)
+          sudo apt-get install -y git
+          
+          # Install jq for JSON processing
+          sudo apt-get install -y jq
+          
+          # Install AWS CLI
+          sudo apt-get install -y awscli
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+      
+      - name: Run backup script
+        env:
+          OWNER: phildass
+          BACKUP_TO_ORG_REPOS: 'false'
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_PREFIX: backups
+          KEEP_ISSUES: 'true'
+          USE_GITHUB_PAT: 'true'
+          BACKUP_GITHUB_TOKEN: ${{ secrets.BACKUP_GITHUB_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          chmod +x .github/scripts/backup_repos.sh
+          .github/scripts/backup_repos.sh
